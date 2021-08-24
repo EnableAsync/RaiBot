@@ -1,10 +1,16 @@
 mod netease;
+mod db;
 
 use dotenv::dotenv;
 use serde_json::Value;
 use std::env;
 use std::error::Error;
 use teloxide::{prelude::*, utils::command::BotCommand};
+use lazy_static::lazy_static;
+
+lazy_static!(
+    static ref TELEPHONE_DB: db::TelephoneDb = db::TelephoneDb::default();
+);
 
 #[derive(BotCommand)]
 #[command(rename = "lowercase", description = "支持这些命令")]
@@ -13,8 +19,8 @@ enum Command {
     Help,
     #[command(description = "搜索音乐")]
     Music(String),
-    #[command(description = "音乐推荐")]
-    MusicRecommend,
+    #[command(description = "查询qq手机号")]
+    QQ(String),
 }
 
 async fn answer(
@@ -44,7 +50,16 @@ async fn answer(
                 .await?
         }
 
-        _ => cx.answer(Command::descriptions()).await?,
+        Command::QQ(qq) => {
+            if qq.is_empty() {
+                cx.answer("qq不能为空").await?;
+                return Ok(());
+            }
+            let telephone = TELEPHONE_DB.get_telephone(&qq).unwrap_or("未搜索到该qq的手机号码".to_string());
+            cx.answer(telephone).await?
+        }
+
+        // _ => cx.answer(Command::descriptions()).await?,
     };
 
     Ok(())
